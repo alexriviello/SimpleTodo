@@ -1,9 +1,11 @@
 package com.example.simpletodo;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -21,6 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    public static final String KEY_ITEM_TEXT = "item_text";
+    public static final String KEY_ITEM_POSITION = "item_position";
+    public static final int EDIT_TEXT_CODE = 20;
 
     List<String> items;
 
@@ -53,7 +59,20 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        itemsAdapter = new ItemsAdapter(items, onLongClickListener);
+        ItemsAdapter.OnClickListener onClickListener = new ItemsAdapter.OnClickListener() {
+            @Override
+            public void onItemClicked(int position) {
+                Log.d("MainActivity","Single click at position" + position);
+                // create the new activity
+                Intent i = new Intent(MainActivity.this, EditActivity.class); // where we are, where we're going
+                // paas in data with intent
+                i.putExtra(KEY_ITEM_TEXT, items.get(position));
+                i.putExtra(KEY_ITEM_POSITION, position);
+                // Display the activity
+                startActivityForResult(i,EDIT_TEXT_CODE);
+            }
+        };
+        itemsAdapter = new ItemsAdapter(items, onLongClickListener, onClickListener);
         rvItems.setAdapter(itemsAdapter); // Set adapter to recyclerview
         rvItems.setLayoutManager(new LinearLayoutManager( this)); // Set layout manager for rvitems, using most basic one
 
@@ -74,6 +93,29 @@ public class MainActivity extends AppCompatActivity {
                 saveItems();
             }
         });
+    }
+
+    // handle the result of the edit activity, bring the text back to main
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK && requestCode == EDIT_TEXT_CODE){
+            // Retrieve the updated text
+            String itemText = data.getStringExtra(KEY_ITEM_TEXT);
+            // Extra the original position of the edited item
+            int position = data.getExtras().getInt(KEY_ITEM_POSITION);
+            // update the model at the right position with the new item text
+            items.set(position, itemText);
+            // Notify the adapter
+            itemsAdapter.notifyItemChanged(position);
+            // Persist the changes
+            saveItems();
+            // Toast message to notify user item was edited
+            Toast.makeText(getApplicationContext(), "Item updated!", Toast.LENGTH_SHORT).show();
+        } else {
+            Log.w("MainActivity", "Unknown call to onActivityResult");
+        }
+
     }
 
     // Passes in file directory, name of file
